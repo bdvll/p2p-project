@@ -20,6 +20,7 @@ package se.kth.news.sim;
 import java.util.HashMap;
 import java.util.Map;
 import se.kth.news.sim.compatibility.SimNodeIdExtractor;
+import se.kth.news.stats.StatComp;
 import se.kth.news.system.HostMngrComp;
 import se.sics.kompics.network.Address;
 import se.sics.kompics.simulator.SimulationScenario;
@@ -84,6 +85,35 @@ public class ScenarioGen {
         }
     };
 
+    static Operation<StartNodeEvent> startStatCompOp = new Operation<StartNodeEvent>() {
+
+        @Override
+        public StartNodeEvent generate() {
+            return new StartNodeEvent() {
+                KAddress selfAdr;
+
+                {
+                    selfAdr = ScenarioSetup.statServer;
+                }
+
+                @Override
+                public Address getNodeAddress() {
+                    return selfAdr;
+                }
+
+                @Override
+                public Class getComponentDefinition() {
+                    return StatComp.class;
+                }
+
+                @Override
+                public StatComp.Init getComponentInit() {
+                    return new StatComp.Init(selfAdr);
+                }
+            };
+        }
+    };
+
     static Operation1<StartNodeEvent, Integer> startNodeOp = new Operation1<StartNodeEvent, Integer>() {
 
         @Override
@@ -107,7 +137,7 @@ public class ScenarioGen {
 
                 @Override
                 public HostMngrComp.Init getComponentInit() {
-                    return new HostMngrComp.Init(selfAdr, ScenarioSetup.bootstrapServer, ScenarioSetup.newsOverlayId);
+                    return new HostMngrComp.Init(selfAdr, ScenarioSetup.bootstrapServer, ScenarioSetup.statServer, ScenarioSetup.newsOverlayId);
                 }
 
                 @Override
@@ -137,16 +167,23 @@ public class ScenarioGen {
                         raise(1, startBootstrapServerOp);
                     }
                 };
+                final StochasticProcess startStatServer = new StochasticProcess() {
+                    {
+                        eventInterArrivalTime(constant(1000));
+                        raise(1, startStatCompOp);
+                    }
+                };
                 StochasticProcess startPeers = new StochasticProcess() {
                     {
                         eventInterArrivalTime(uniform(1000, 1100));
-                        raise(100, startNodeOp, new BasicIntSequentialDistribution(1));
+                        raise(2, startNodeOp, new BasicIntSequentialDistribution(2));
                     }
                 };
 
                 systemSetup.start();
                 startBootstrapServer.startAfterTerminationOf(1000, systemSetup);
-                startPeers.startAfterTerminationOf(1000, startBootstrapServer);
+                startStatServer.startAfterTerminationOf(1000, startBootstrapServer);
+                startPeers.startAfterTerminationOf(1000, startStatServer);
                 terminateAfterTerminationOf(1000*1000, startPeers);
             }
         };

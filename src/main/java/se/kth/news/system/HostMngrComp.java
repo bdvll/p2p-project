@@ -55,6 +55,7 @@ public class HostMngrComp extends ComponentDefinition {
     //***************************EXTERNAL_STATE*********************************
     private KAddress selfAdr;
     private KAddress bootstrapServer;
+    private KAddress statServer;
     private Identifier overlayId;
     //***************************INTERNAL_STATE*********************************
     private Component bootstrapClientComp;
@@ -67,6 +68,7 @@ public class HostMngrComp extends ComponentDefinition {
         LOG.info("{}initiating...", logPrefix);
 
         bootstrapServer = init.bootstrapServer;
+        statServer = init.statServer;
         overlayId = init.overlayId;
 
         subscribe(handleStart, control);
@@ -101,7 +103,7 @@ public class HostMngrComp extends ComponentDefinition {
     private void connectApp() {
         AppMngrComp.ExtPort extPorts = new AppMngrComp.ExtPort(timerPort, networkPort,
                 overlayMngrComp.getPositive(CroupierPort.class), overlayMngrComp.getPositive(GradientPort.class),
-                overlayMngrComp.getNegative(OverlayViewUpdatePort.class));
+                overlayMngrComp.getNegative(OverlayViewUpdatePort.class), statServer);
         appMngrComp = create(AppMngrComp.class, new AppMngrComp.Init(extPorts, selfAdr, overlayId));
         connect(appMngrComp.getNegative(OverlayMngrPort.class), overlayMngrComp.getPositive(OverlayMngrPort.class), Channel.TWO_WAY);
     }
@@ -110,11 +112,13 @@ public class HostMngrComp extends ComponentDefinition {
 
         public final KAddress selfAdr;
         public final KAddress bootstrapServer;
+        public final KAddress statServer;
         public final Identifier overlayId;
 
-        public Init(KAddress selfAdr, KAddress bootstrapServer, Identifier overlayId) {
+        public Init(KAddress selfAdr, KAddress bootstrapServer, KAddress statServer, Identifier overlayId) {
             this.selfAdr = selfAdr;
             this.bootstrapServer = bootstrapServer;
+            this.statServer = statServer;
             this.overlayId = overlayId;
         }
     }

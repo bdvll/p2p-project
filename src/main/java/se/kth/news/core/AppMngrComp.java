@@ -104,7 +104,7 @@ public class AppMngrComp extends ComponentDefinition {
     }
 
     private void connectNews() {
-        newsComp = create(NewsComp.class, new NewsComp.Init(selfAdr, gradientOId));
+        newsComp = create(NewsComp.class, new NewsComp.Init(selfAdr, gradientOId, extPorts.statServer));
         connect(newsComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
         connect(newsComp.getNegative(Network.class), extPorts.networkPort, Channel.TWO_WAY);
         connect(newsComp.getNegative(CroupierPort.class), extPorts.croupierPort, Channel.TWO_WAY);
@@ -133,14 +133,16 @@ public class AppMngrComp extends ComponentDefinition {
         public final Positive<CroupierPort> croupierPort;
         public final Positive<GradientPort> gradientPort;
         public final Negative<OverlayViewUpdatePort> viewUpdatePort;
+        public final KAddress statServer;
 
         public ExtPort(Positive<Timer> timerPort, Positive<Network> networkPort, Positive<CroupierPort> croupierPort,
-                Positive<GradientPort> gradientPort, Negative<OverlayViewUpdatePort> viewUpdatePort) {
+                Positive<GradientPort> gradientPort, Negative<OverlayViewUpdatePort> viewUpdatePort, KAddress statServer) {
             this.networkPort = networkPort;
             this.timerPort = timerPort;
             this.croupierPort = croupierPort;
             this.gradientPort = gradientPort;
             this.viewUpdatePort = viewUpdatePort;
+            this.statServer = statServer;
         }
     }
 }

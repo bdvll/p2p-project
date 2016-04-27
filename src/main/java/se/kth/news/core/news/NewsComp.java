@@ -17,15 +17,18 @@
  */
 package se.kth.news.core.news;
 
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.kth.news.core.leader.LeaderSelectPort;
 import se.kth.news.core.leader.LeaderUpdate;
+import se.kth.news.core.news.messages.NewsItem;
+import se.kth.news.core.news.util.NewsSet;
 import se.kth.news.core.news.util.NewsView;
 import se.kth.news.play.Ping;
 import se.kth.news.play.Pong;
+import se.kth.news.stats.messages.NewsStat;
 import se.sics.kompics.ClassMatchedHandler;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -34,6 +37,8 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.croupier.CroupierPort;
 import se.sics.ktoolbox.croupier.event.CroupierSample;
@@ -66,11 +71,16 @@ public class NewsComp extends ComponentDefinition {
     //*******************************EXTERNAL_STATE*****************************
     private KAddress selfAdr;
     private Identifier gradientOId;
+    private KAddress statServer;
     //*******************************INTERNAL_STATE*****************************
     private NewsView localNewsView;
+    private CroupierSample<NewsView> currentNeighbours;
+    private NewsSet newsSet = new NewsSet();
+    private ArrayList<NewsItem> unsentNews = new ArrayList<>();
 
     public NewsComp(Init init) {
         selfAdr = init.selfAdr;
+        statServer = init.statServer;
         logPrefix = "<nid:" + selfAdr.getId() + ">";
         LOG.info("{}initiating...", logPrefix);
 
@@ -80,8 +90,10 @@ public class NewsComp extends ComponentDefinition {
         subscribe(handleCroupierSample, croupierPort);
         subscribe(handleGradientSample, gradientPort);
         subscribe(handleLeader, leaderPort);
-        subscribe(handlePing, networkPort);
+        subscribe(handleNewsItem, networkPort);
         subscribe(handlePong, networkPort);
+        subscribe(unFloodedTimeoutHandler, timerPort);
+        subscribe(sendStatTimeoutHandler, timerPort);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -89,8 +101,28 @@ public class NewsComp extends ComponentDefinition {
         public void handle(Start event) {
             LOG.info("{}starting...", logPrefix);
             updateLocalNewsView();
+            generateNewsAtStart();
+            startTimers();
         }
     };
+
+    private void startTimers(){
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(0, 1000);
+        UnFloodedTimeout floodTimeout = new UnFloodedTimeout(spt);
+        spt.setTimeoutEvent(floodTimeout);
+        trigger(spt, timerPort);
+
+        SchedulePeriodicTimeout spt2 = new SchedulePeriodicTimeout(0, 10000);
+        SendStatsTimeout statsTimeout = new SendStatsTimeout(spt2);
+        spt2.setTimeoutEvent(statsTimeout);
+        trigger(spt2, timerPort);
+    }
+
+    private void generateNewsAtStart(){
+        NewsItem item = new NewsItem(5);
+        newsSet.add(item);
+        floodToNeighbours(item);
+    }
 
     private void updateLocalNewsView() {
         localNewsView = new NewsView(selfAdr.getId(), 0);
@@ -104,11 +136,20 @@ public class NewsComp extends ComponentDefinition {
             if (castSample.publicSample.isEmpty()) {
                 return;
             }
-            Iterator<Identifier> it = castSample.publicSample.keySet().iterator();
-            KAddress partner = castSample.publicSample.get(it.next()).getSource();
-            KHeader header = new BasicHeader(selfAdr, partner, Transport.UDP);
-            KContentMsg msg = new BasicContentMsg(header, new Ping());
-            trigger(msg, networkPort);
+
+            currentNeighbours = castSample;
+
+            //LOG.info("{}got {} neighbours from croupier", logPrefix, castSample.publicSample.size());
+
+//            Iterator<Identifier> it = castSample.publicSample.keySet().iterator();
+
+//            while(it.hasNext()){
+//                KAddress partner = castSample.publicSample.get(it.next()).getSource();
+//                KHeader header = new BasicHeader(selfAdr, partner, Transport.UDP);
+//
+//                KContentMsg msg = new BasicContentMsg(header, new Ping());
+//                trigger(msg, networkPort);
+//            }
         }
     };
 
@@ -124,15 +165,38 @@ public class NewsComp extends ComponentDefinition {
         }
     };
 
-    ClassMatchedHandler handlePing
-            = new ClassMatchedHandler<Ping, KContentMsg<?, ?, Ping>>() {
+    ClassMatchedHandler handleNewsItem
+            = new ClassMatchedHandler<NewsItem, KContentMsg<?, ?, NewsItem>>() {
 
                 @Override
-                public void handle(Ping content, KContentMsg<?, ?, Ping> container) {
-                    LOG.info("{}received ping from:{}", logPrefix, container.getHeader().getSource());
-                    trigger(container.answer(new Pong()), networkPort);
+                public void handle(NewsItem item, KContentMsg<?, ?, NewsItem> container) {
+                    LOG.info("{}received newsitem from:{}", logPrefix, container.getHeader().getSource());
+                    newsSet.add(item);
+                    floodToNeighbours(item);
                 }
             };
+
+    private void floodToNeighbours(NewsItem item){
+        if(!hasNeighbours()){
+            unsentNews.add(item);
+            return;
+        }
+
+        item.decreaseTTL();
+        if(item.shouldFlood()) {
+
+            Iterator<Identifier> it = currentNeighbours.publicSample.keySet().iterator();
+
+            while (it.hasNext()) {
+                KAddress neighbour = currentNeighbours.publicSample.get(it.next()).getSource();
+                KHeader header = new BasicHeader(selfAdr, neighbour, Transport.UDP);
+
+                KContentMsg msg = new BasicContentMsg(header, item);
+                LOG.info("{}sent item {} to {}", logPrefix, item.getId(), neighbour);
+                trigger(msg, networkPort);
+            }
+        }
+    }
 
     ClassMatchedHandler handlePong
             = new ClassMatchedHandler<Pong, KContentMsg<?, KHeader<?>, Pong>>() {
@@ -143,14 +207,56 @@ public class NewsComp extends ComponentDefinition {
                 }
             };
 
+    Handler<UnFloodedTimeout> unFloodedTimeoutHandler = new Handler<UnFloodedTimeout>() {
+        @Override
+        public void handle(UnFloodedTimeout unFloodedTimeout) {
+            int unsentCount = unsentNews.size();
+            for(int i = 0; i < unsentCount; ++i){
+                NewsItem item = unsentNews.remove(0);
+                floodToNeighbours(item);
+            }
+        }
+    };
+
+    Handler<SendStatsTimeout> sendStatTimeoutHandler = new Handler<SendStatsTimeout>() {
+
+        @Override
+        public void handle(SendStatsTimeout sendStatsTimeout) {
+            KHeader header = new BasicHeader(selfAdr, statServer, Transport.UDP);
+            KContentMsg msg = new BasicContentMsg(header, new NewsStat(newsSet.getIds()));
+            trigger(msg, networkPort);
+        }
+    };
+
+    private boolean hasNeighbours(){
+        return currentNeighbours != null && !currentNeighbours.publicSample.isEmpty();
+    }
+
+    private static class UnFloodedTimeout extends Timeout{
+
+        public UnFloodedTimeout(SchedulePeriodicTimeout request){
+            super(request);
+        }
+
+    }
+
+    private static class SendStatsTimeout extends Timeout{
+
+        public SendStatsTimeout(SchedulePeriodicTimeout request){
+            super(request);
+        }
+    }
+
     public static class Init extends se.sics.kompics.Init<NewsComp> {
 
         public final KAddress selfAdr;
         public final Identifier gradientOId;
+        public final KAddress statServer;
 
-        public Init(KAddress selfAdr, Identifier gradientOId) {
+        public Init(KAddress selfAdr, Identifier gradientOId, KAddress statServer) {
             this.selfAdr = selfAdr;
             this.gradientOId = gradientOId;
+            this.statServer = statServer;
         }
     }
 }
