@@ -38,6 +38,7 @@ import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.croupier.CroupierPort;
@@ -107,7 +108,7 @@ public class NewsComp extends ComponentDefinition {
     };
 
     private void startTimers(){
-        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(0, 1000);
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(100000, 1000);
         UnFloodedTimeout floodTimeout = new UnFloodedTimeout(spt);
         spt.setTimeoutEvent(floodTimeout);
         trigger(spt, timerPort);
@@ -116,12 +117,15 @@ public class NewsComp extends ComponentDefinition {
         SendStatsTimeout statsTimeout = new SendStatsTimeout(spt2);
         spt2.setTimeoutEvent(statsTimeout);
         trigger(spt2, timerPort);
+
     }
 
     private void generateNewsAtStart(){
-        NewsItem item = new NewsItem(5);
-        newsSet.add(item);
-        floodToNeighbours(item);
+        if(Math.random() >= 0.5f) {
+            NewsItem item = new NewsItem(15);
+            unsentNews.add(item);
+        }
+       // floodToNeighbours(item);
     }
 
     private void updateLocalNewsView() {
@@ -170,7 +174,7 @@ public class NewsComp extends ComponentDefinition {
 
                 @Override
                 public void handle(NewsItem item, KContentMsg<?, ?, NewsItem> container) {
-                    LOG.info("{}received newsitem from:{}", logPrefix, container.getHeader().getSource());
+                    LOG.debug("{}received newsitem from:{}", logPrefix, container.getHeader().getSource());
                     newsSet.add(item);
                     floodToNeighbours(item);
                 }
@@ -192,7 +196,7 @@ public class NewsComp extends ComponentDefinition {
                 KHeader header = new BasicHeader(selfAdr, neighbour, Transport.UDP);
 
                 KContentMsg msg = new BasicContentMsg(header, item);
-                LOG.info("{}sent item {} to {}", logPrefix, item.getId(), neighbour);
+                LOG.debug("{}sent item {} to {}", logPrefix, item.getId(), neighbour);
                 trigger(msg, networkPort);
             }
         }

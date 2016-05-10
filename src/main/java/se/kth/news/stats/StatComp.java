@@ -2,22 +2,17 @@ package se.kth.news.stats;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.kth.news.core.news.messages.NewsItem;
 import se.kth.news.stats.messages.NewsStat;
 import se.sics.kompics.*;
 import se.sics.kompics.network.Network;
-import se.sics.kompics.network.netty.NettyInit;
-import se.sics.kompics.network.netty.NettyNetwork;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
-import se.sics.ktoolbox.util.network.KHeader;
 
-import java.sql.Time;
 import java.util.*;
+import java.util.function.BiConsumer;
 
 /**
  * Created by Love on 2016-04-27.
@@ -28,7 +23,7 @@ public class StatComp extends ComponentDefinition {
     private Positive<Timer> timer = requires(Timer.class);
     private static final Logger LOG = LoggerFactory.getLogger(StatComp.class);
 
-    private HashMap<KAddress, UUID[]> news = new HashMap<>();
+    private HashMap<KAddress, UUID[]> nodeData = new HashMap<>();
 
     public StatComp(Init init){
 
@@ -60,7 +55,7 @@ public class StatComp extends ComponentDefinition {
         @Override
         public void handle(NewsStat item, KContentMsg<KAddress, ?, NewsStat> container) {
             KAddress source = container.getHeader().getSource();
-            news.put(source, item.getIds());
+            nodeData.put(source, item.getIds());
         }
     };
 
@@ -72,23 +67,48 @@ public class StatComp extends ComponentDefinition {
     };
 
     private void calculateStats(){
-        HashSet<UUID> uniqueNews = new HashSet<>();
+        HashMap<UUID, Integer> uniqueNews = new HashMap<>();
 
-        Iterator<KAddress> it = news.keySet().iterator();
+        Iterator<KAddress> it = nodeData.keySet().iterator();
         while(it.hasNext()){
             KAddress node = it.next();
-            UUID[] newsSeen = news.get(node);
+            UUID[] newsSeen = nodeData.get(node);
 
-            uniqueNews.addAll(Arrays.asList(newsSeen));
+            for(UUID id: newsSeen)
+                uniqueNews.putIfAbsent(id, 0);
         }
 
-        it = news.keySet().iterator();
+        it = nodeData.keySet().iterator();
+        float avgCoverage = 0;
         while(it.hasNext()){
             KAddress node = it.next();
-            UUID[] newsSeen = news.get(node);
-
-            
+            UUID[] newsSeen = nodeData.get(node);
+            float nodeCoverage = (float) newsSeen.length / uniqueNews.size();
+            avgCoverage += nodeCoverage;
+            for(UUID id: newsSeen){
+                int count = uniqueNews.get(id);
+                uniqueNews.put(id, ++count);
+            }
         }
+
+        avgCoverage /= nodeData.size();
+
+        LOG.info("avg node coverage {}", avgCoverage);
+
+        float avgNewsCoverage = 0;
+        Iterator<UUID> newsIds = uniqueNews.keySet().iterator();
+        while(newsIds.hasNext()){
+            UUID newsItem = newsIds.next();
+
+            int count = uniqueNews.get(newsItem);
+            float coverage = (float) count / nodeData.size();
+
+            avgNewsCoverage += coverage;
+        }
+
+        avgNewsCoverage /= uniqueNews.size();
+
+        LOG.info("avg news coverage {}", avgNewsCoverage);
 
     }
 
