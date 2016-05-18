@@ -26,9 +26,12 @@ import se.kth.news.core.leader.LeaderUpdate;
 import se.kth.news.core.news.messages.NewsItem;
 import se.kth.news.core.news.util.NewsSet;
 import se.kth.news.core.news.util.NewsView;
+import se.kth.news.core.paxos.PaxosLeaderPort;
+import se.kth.news.core.paxos.PaxosNewsPort;
 import se.kth.news.play.Ping;
 import se.kth.news.play.Pong;
 import se.kth.news.stats.messages.NewsStat;
+import se.kth.news.util.BoundedArrayList;
 import se.sics.kompics.ClassMatchedHandler;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -51,6 +54,7 @@ import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.ktoolbox.util.other.Container;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdate;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 
@@ -62,6 +66,8 @@ public class NewsComp extends ComponentDefinition {
     private static final Logger LOG = LoggerFactory.getLogger(NewsComp.class);
     private String logPrefix = " ";
 
+
+
     //*******************************CONNECTIONS********************************
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<Network> networkPort = requires(Network.class);
@@ -69,6 +75,7 @@ public class NewsComp extends ComponentDefinition {
     Positive<GradientPort> gradientPort = requires(GradientPort.class);
     Positive<LeaderSelectPort> leaderPort = requires(LeaderSelectPort.class);
     Negative<OverlayViewUpdatePort> viewUpdatePort = provides(OverlayViewUpdatePort.class);
+    Negative<PaxosNewsPort> paxosNewsPort = provides(PaxosNewsPort.class);
     //*******************************EXTERNAL_STATE*****************************
     private KAddress selfAdr;
     private Identifier gradientOId;
@@ -78,6 +85,7 @@ public class NewsComp extends ComponentDefinition {
     private CroupierSample<NewsView> currentNeighbours;
     private NewsSet newsSet = new NewsSet();
     private ArrayList<NewsItem> unsentNews = new ArrayList<>();
+
 
     public NewsComp(Init init) {
         selfAdr = init.selfAdr;
@@ -123,13 +131,13 @@ public class NewsComp extends ComponentDefinition {
     private void generateNewsAtStart(){
         if(Math.random() >= 0.5f) {
             NewsItem item = new NewsItem(15);
-            unsentNews.add(item);
+            //unsentNews.add(item);
         }
        // floodToNeighbours(item);
     }
 
     private void updateLocalNewsView() {
-        localNewsView = new NewsView(selfAdr.getId(), 0);
+        localNewsView = new NewsView(selfAdr.getId(), newsSet.getNewsCount());
         LOG.debug("{}informing overlays of new view", logPrefix);
         trigger(new OverlayViewUpdate.Indication<>(gradientOId, false, localNewsView.copy()), viewUpdatePort);
     }
@@ -142,30 +150,20 @@ public class NewsComp extends ComponentDefinition {
             }
 
             currentNeighbours = castSample;
-
-            //LOG.info("{}got {} neighbours from croupier", logPrefix, castSample.publicSample.size());
-
-//            Iterator<Identifier> it = castSample.publicSample.keySet().iterator();
-
-//            while(it.hasNext()){
-//                KAddress partner = castSample.publicSample.get(it.next()).getSource();
-//                KHeader header = new BasicHeader(selfAdr, partner, Transport.UDP);
-//
-//                KContentMsg msg = new BasicContentMsg(header, new Ping());
-//                trigger(msg, networkPort);
-//            }
         }
     };
 
     Handler handleGradientSample = new Handler<TGradientSample>() {
         @Override
         public void handle(TGradientSample sample) {
+            //Leave leader selection to the correct component
         }
     };
 
     Handler handleLeader = new Handler<LeaderUpdate>() {
         @Override
         public void handle(LeaderUpdate event) {
+            LOG.info("{} was informed of a new leader: {}", logPrefix, event.leaderAdr);
         }
     };
 
@@ -176,6 +174,7 @@ public class NewsComp extends ComponentDefinition {
                 public void handle(NewsItem item, KContentMsg<?, ?, NewsItem> container) {
                     LOG.debug("{}received newsitem from:{}", logPrefix, container.getHeader().getSource());
                     newsSet.add(item);
+                    updateLocalNewsView();
                     floodToNeighbours(item);
                 }
             };
@@ -250,6 +249,7 @@ public class NewsComp extends ComponentDefinition {
             super(request);
         }
     }
+
 
     public static class Init extends se.sics.kompics.Init<NewsComp> {
 

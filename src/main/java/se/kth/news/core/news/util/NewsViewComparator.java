@@ -36,6 +36,6 @@ public class NewsViewComparator implements Comparator<NewsView> {
         if(o1.localNewsCount != o2.localNewsCount) {
             return Ints.compare(o1.localNewsCount, o2.localNewsCount);
         }
-        return o1.nodeId.compareTo(o2.nodeId);
+        return o2.nodeId.compareTo(o1.nodeId);
     }
 }

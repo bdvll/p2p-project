@@ -24,7 +24,7 @@ import se.sics.ktoolbox.util.update.View;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class NewsView implements View {
+public class NewsView implements View{
     
     public final int localNewsCount;
     public final Identifier nodeId; //view tie breaker
@@ -33,13 +33,22 @@ public class NewsView implements View {
         this.nodeId = nodeId;
         this.localNewsCount = localNewsCount;
     }
-    
+
     public NewsView copy() {
         return new NewsView(nodeId, localNewsCount);
     }
     
     @Override
     public String toString() {
-        return "News<" + nodeId + ">";
+        return "#"+localNewsCount +" News<" + nodeId + ">";
+    }
+
+
+    // ;^)
+    public double getUtility(){
+        double floatPart = Double.parseDouble(nodeId.toString());
+        double fraction = 1/(floatPart+1);
+        double utility = localNewsCount+fraction;
+        return utility;
     }
 }

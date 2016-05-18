@@ -24,6 +24,9 @@ import se.kth.news.core.leader.LeaderSelectPort;
 import se.kth.news.core.news.NewsComp;
 import se.kth.news.core.news.util.NewsViewComparator;
 import se.kth.news.core.news.util.NewsViewGradientFilter;
+import se.kth.news.core.paxos.PaxosComp;
+import se.kth.news.core.paxos.PaxosLeaderPort;
+import se.kth.news.core.paxos.PaxosNewsPort;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
@@ -58,6 +61,7 @@ public class AppMngrComp extends ComponentDefinition {
     //***************************INTERNAL_STATE*********************************
     private Component leaderSelectComp;
     private Component newsComp;
+    private Component paxosComp;
     //******************************AUX_STATE***********************************
     private OMngrTGradient.ConnectRequest pendingGradientConnReq;
     //**************************************************************************
@@ -91,8 +95,10 @@ public class AppMngrComp extends ComponentDefinition {
             LOG.info("{}overlays connected", logPrefix);
             connectLeaderSelect();
             connectNews();
+            connectPaxos();
             trigger(Start.event, leaderSelectComp.control());
             trigger(Start.event, newsComp.control());
+            trigger(Start.event, paxosComp.control());
         }
     };
 
@@ -111,6 +117,14 @@ public class AppMngrComp extends ComponentDefinition {
         connect(newsComp.getNegative(GradientPort.class), extPorts.gradientPort, Channel.TWO_WAY);
         connect(newsComp.getNegative(LeaderSelectPort.class), leaderSelectComp.getPositive(LeaderSelectPort.class), Channel.TWO_WAY);
         connect(newsComp.getPositive(OverlayViewUpdatePort.class), extPorts.viewUpdatePort, Channel.TWO_WAY);
+    }
+
+    private void connectPaxos(){
+        paxosComp = create(PaxosComp.class, new PaxosComp.Init(selfAdr));
+        connect(paxosComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
+        connect(paxosComp.getNegative(Network.class), extPorts.networkPort, Channel.TWO_WAY);
+        connect(paxosComp.getNegative(PaxosLeaderPort.class), leaderSelectComp.getPositive(PaxosLeaderPort.class), Channel.TWO_WAY);
+        connect(paxosComp.getNegative(PaxosNewsPort.class), newsComp.getPositive(PaxosNewsPort.class), Channel.TWO_WAY);
     }
 
     public static class Init extends se.sics.kompics.Init<AppMngrComp> {

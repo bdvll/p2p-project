@@ -175,8 +175,8 @@ public class ScenarioGen {
                 };
                 StochasticProcess startPeers = new StochasticProcess() {
                     {
-                        eventInterArrivalTime(uniform(100,200));
-                        raise(168, startNodeOp, new BasicIntSequentialDistribution(2));
+                        eventInterArrivalTime(uniform(10, 20));
+                        raise(5, startNodeOp, new BasicIntSequentialDistribution(2));
                     }
                 };
 
