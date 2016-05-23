@@ -17,16 +17,19 @@
  */
 package se.kth.news.core;
 
+import se.kth.news.core.dissemination.DisseminationComp;
+import se.kth.news.core.dissemination.ports.LeaderDisseminationPort;
+import se.kth.news.core.dissemination.ports.NewsDisseminationPort;
 import se.kth.news.core.leader.LeaderSelectComp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.kth.news.core.leader.LeaderSelectPort;
+import se.kth.news.core.leader.ports.LeaderSelectPort;
 import se.kth.news.core.news.NewsComp;
 import se.kth.news.core.news.util.NewsViewComparator;
 import se.kth.news.core.news.util.NewsViewGradientFilter;
 import se.kth.news.core.paxos.PaxosComp;
-import se.kth.news.core.paxos.PaxosLeaderPort;
-import se.kth.news.core.paxos.PaxosNewsPort;
+import se.kth.news.core.paxos.ports.PaxosLeaderPort;
+import se.kth.news.core.paxos.ports.PaxosNewsPort;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
@@ -62,6 +65,7 @@ public class AppMngrComp extends ComponentDefinition {
     private Component leaderSelectComp;
     private Component newsComp;
     private Component paxosComp;
+    private Component disseminationComp;
     //******************************AUX_STATE***********************************
     private OMngrTGradient.ConnectRequest pendingGradientConnReq;
     //**************************************************************************
@@ -96,9 +100,11 @@ public class AppMngrComp extends ComponentDefinition {
             connectLeaderSelect();
             connectNews();
             connectPaxos();
+            connectDissemination();
             trigger(Start.event, leaderSelectComp.control());
             trigger(Start.event, newsComp.control());
             trigger(Start.event, paxosComp.control());
+            trigger(Start.event, disseminationComp.control());
         }
     };
 
@@ -125,6 +131,15 @@ public class AppMngrComp extends ComponentDefinition {
         connect(paxosComp.getNegative(Network.class), extPorts.networkPort, Channel.TWO_WAY);
         connect(paxosComp.getNegative(PaxosLeaderPort.class), leaderSelectComp.getPositive(PaxosLeaderPort.class), Channel.TWO_WAY);
         connect(paxosComp.getNegative(PaxosNewsPort.class), newsComp.getPositive(PaxosNewsPort.class), Channel.TWO_WAY);
+    }
+
+    private void connectDissemination(){
+        disseminationComp = create(DisseminationComp.class, new DisseminationComp.Init(selfAdr));
+        connect(disseminationComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
+        connect(disseminationComp.getNegative(Network.class), extPorts.networkPort, Channel.TWO_WAY);
+        connect(disseminationComp.getNegative(GradientPort.class), extPorts.gradientPort, Channel.TWO_WAY);
+        connect(disseminationComp.getPositive(NewsDisseminationPort.class), newsComp.getNegative(NewsDisseminationPort.class), Channel.TWO_WAY);
+        connect(disseminationComp.getPositive(LeaderDisseminationPort.class), leaderSelectComp.getNegative(LeaderDisseminationPort.class), Channel.TWO_WAY);
     }
 
     public static class Init extends se.sics.kompics.Init<AppMngrComp> {

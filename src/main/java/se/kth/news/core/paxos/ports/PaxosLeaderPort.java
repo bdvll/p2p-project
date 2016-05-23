@@ -1,5 +1,6 @@
-package se.kth.news.core.paxos;
+package se.kth.news.core.paxos.ports;
 
+import se.kth.news.core.paxos.events.*;
 import se.sics.kompics.PortType;
 
 /**

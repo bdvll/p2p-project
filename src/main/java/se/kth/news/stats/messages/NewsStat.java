@@ -7,13 +7,13 @@ import java.util.UUID;
  */
 public class NewsStat {
 
-    private UUID[] ids;
+    private String bitString;
 
-    public NewsStat(UUID[] ids) {
-        this.ids = ids;
+    public NewsStat(String bitString) {
+        this.bitString = bitString;
     }
 
-    public UUID[] getIds() {
-        return ids;
+    public String getBitString() {
+        return bitString;
     }
 }

@@ -1,16 +1,16 @@
-package se.kth.news.core.paxos;
+package se.kth.news.core.dissemination.events;
 
 import se.sics.kompics.KompicsEvent;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**
- * Created by Love on 2016-05-18.
+ * Created by Love on 2016-05-20.
  */
-public class PaxosLeaderAnnounce implements KompicsEvent {
+public class LeaderUpdate implements KompicsEvent {
 
     private KAddress leader;
 
-    public PaxosLeaderAnnounce(KAddress leader) {
+    public LeaderUpdate(KAddress leader) {
         this.leader = leader;
     }
 

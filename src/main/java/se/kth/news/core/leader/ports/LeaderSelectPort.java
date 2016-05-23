@@ -15,8 +15,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.news.core.leader;
+package se.kth.news.core.leader.ports;
 
+import se.kth.news.core.dissemination.events.LeaderRequest;
+import se.kth.news.core.leader.events.LeaderUpdate;
 import se.sics.kompics.PortType;
 
 /**
@@ -25,5 +27,6 @@ import se.sics.kompics.PortType;
 public class LeaderSelectPort extends PortType {
     {
         indication(LeaderUpdate.class);
+        request(LeaderUpdate.class);
     }
 }

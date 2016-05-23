@@ -21,10 +21,14 @@ import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.news.core.dissemination.events.LeaderRequest;
+import se.kth.news.core.dissemination.events.LeaderResponse;
+import se.kth.news.core.dissemination.ports.LeaderDisseminationPort;
+import se.kth.news.core.leader.events.LeaderUpdate;
+import se.kth.news.core.leader.ports.LeaderSelectPort;
 import se.kth.news.core.news.util.NewsView;
-import se.kth.news.core.news.util.NewsViewComparator;
-import se.kth.news.core.paxos.*;
-import se.kth.news.util.BoundedArrayList;
+import se.kth.news.core.paxos.events.*;
+import se.kth.news.core.paxos.ports.PaxosLeaderPort;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -35,7 +39,6 @@ import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.gradient.GradientPort;
 import se.sics.ktoolbox.gradient.event.TGradientSample;
 import se.sics.ktoolbox.gradient.util.GradientContainer;
-import se.sics.ktoolbox.util.config.KConfigHelper;
 import se.sics.ktoolbox.util.config.KConfigOption;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.other.Container;
@@ -56,6 +59,7 @@ public class LeaderSelectComp extends ComponentDefinition {
     Positive<GradientPort> gradientPort = requires(GradientPort.class);
     Negative<LeaderSelectPort> leaderUpdate = provides(LeaderSelectPort.class);
     Negative<PaxosLeaderPort> paxosLeaderPort = provides(PaxosLeaderPort.class);
+    Positive<LeaderDisseminationPort> leaderDisseminationPort = requires(LeaderDisseminationPort.class);
     //*******************************EXTERNAL_STATE*****************************
     private KAddress selfAdr;
     //*******************************INTERNAL_STATE*****************************
@@ -88,6 +92,11 @@ public class LeaderSelectComp extends ComponentDefinition {
         subscribe(paxosLeaderResponseHandler, paxosLeaderPort);
         subscribe(paxosLeaderInternalCheckHandler, paxosLeaderPort);
         subscribe(paxosLeaderAnnounceHandler, paxosLeaderPort);
+
+        subscribe(leaderRequestHandler, leaderDisseminationPort);
+        subscribe(leaderUpdateHandler, leaderDisseminationPort);
+
+        subscribe(handleLeaderUpdateFromNews, leaderUpdate);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -185,6 +194,33 @@ public class LeaderSelectComp extends ComponentDefinition {
         public void handle(PaxosLeaderAnnounce paxosLeaderAnnounce) {
             currentLeader = paxosLeaderAnnounce.getLeader();
             trigger(new LeaderUpdate(currentLeader), leaderUpdate);
+        }
+    };
+
+    Handler<LeaderRequest> leaderRequestHandler = new Handler<LeaderRequest>() {
+        @Override
+        public void handle(LeaderRequest leaderRequest) {
+            trigger(new LeaderResponse(currentLeader, leaderRequest.getRequester(), leaderRequest.getBitString()), leaderDisseminationPort);
+        }
+    };
+
+    Handler<se.kth.news.core.dissemination.events.LeaderUpdate> leaderUpdateHandler = new Handler<se.kth.news.core.dissemination.events.LeaderUpdate>() {
+        @Override
+        public void handle(se.kth.news.core.dissemination.events.LeaderUpdate leaderUpdate) {
+            if(leaderUpdate.getLeader() != null && !leaderUpdate.getLeader().equals(currentLeader)){
+                currentLeader = leaderUpdate.getLeader();
+                trigger(new LeaderUpdate(currentLeader), LeaderSelectComp.this.leaderUpdate);
+            }
+        }
+    };
+
+    // if the newscomponent has discovered a new leader it will inform this component and let it inform the news component
+    // to avoid any split brain
+    Handler<LeaderUpdate> handleLeaderUpdateFromNews = new Handler<LeaderUpdate>() {
+        @Override
+        public void handle(LeaderUpdate leaderUpdate) {
+            currentLeader = leaderUpdate.leaderAdr;
+            trigger(new LeaderUpdate(currentLeader), LeaderSelectComp.this.leaderUpdate);
         }
     };
 

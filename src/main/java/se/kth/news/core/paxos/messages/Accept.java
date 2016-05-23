@@ -6,7 +6,11 @@ package se.kth.news.core.paxos.messages;
 public class Accept<T> {
 
     private T value;
-    private int ballot;
+    private int ballot = -1;
+
+    public Accept(T value) {
+        this.value = value;
+    }
 
     public Accept(T value, int ballot) {
         this.value = value;

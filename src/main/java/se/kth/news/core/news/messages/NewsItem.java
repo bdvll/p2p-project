@@ -1,54 +1,48 @@
 package se.kth.news.core.news.messages;
 
-import com.sun.org.apache.bcel.internal.generic.NEW;
-
-import java.util.UUID;
-
 /**
  * Created by Love on 2016-04-27.
  */
 public class NewsItem {
 
-    private UUID id;
-    private int ttl;
+    private long id;
+    private String newsContent;
 
-    public NewsItem(int ttl) {
-        this.id = UUID.randomUUID();
-        this.ttl = ttl;
+    public NewsItem(long id) {
+        this.id = id;
+        this.newsContent = generateContent();
     }
 
-    public UUID getId() {
+    public long getId() {
         return id;
     }
 
-    public int getTtl() {
-        return ttl;
+    public void setId(long id) {
+        this.id = id;
     }
 
-    public void setTtl(int ttl) {
-        this.ttl = ttl;
-    }
-
-    public void decreaseTTL(){
-        this.ttl--;
-    }
-
-    public boolean shouldFlood(){
-        return this.ttl > 0;
+    public String getNewsContent() {
+        return newsContent;
     }
 
     @Override
     public int hashCode() {
-        return id.hashCode();
+        return (int) id;
     }
 
     @Override
     public boolean equals(Object obj) {
         if(obj instanceof NewsItem){
             NewsItem item = (NewsItem) obj;
-            return item.id.equals(id);
+            return item.id == id;
         }
         return false;
+    }
+
+    private String generateContent(){
+        StringBuilder sb = new StringBuilder();
+
+        return sb.toString();
     }
 
 }

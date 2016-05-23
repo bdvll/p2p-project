@@ -23,7 +23,7 @@ public class StatComp extends ComponentDefinition {
     private Positive<Timer> timer = requires(Timer.class);
     private static final Logger LOG = LoggerFactory.getLogger(StatComp.class);
 
-    private HashMap<KAddress, UUID[]> nodeData = new HashMap<>();
+    private HashMap<KAddress, String> nodeData = new HashMap<>();
 
     public StatComp(Init init){
 
@@ -55,17 +55,18 @@ public class StatComp extends ComponentDefinition {
         @Override
         public void handle(NewsStat item, KContentMsg<KAddress, ?, NewsStat> container) {
             KAddress source = container.getHeader().getSource();
-            nodeData.put(source, item.getIds());
+            nodeData.put(source, item.getBitString());
         }
     };
 
     Handler<AggregateTimeout> aggreaTimeoutHandler = new Handler<AggregateTimeout>() {
         @Override
         public void handle(AggregateTimeout aggregateTimeout) {
-            calculateStats();
+
+            //calculateStats();
         }
     };
-
+/*
     private void calculateStats(){
         HashMap<UUID, Integer> uniqueNews = new HashMap<>();
 
@@ -111,6 +112,8 @@ public class StatComp extends ComponentDefinition {
         LOG.info("avg news coverage {}", avgNewsCoverage);
 
     }
+
+    */
 
     private static class AggregateTimeout extends Timeout{
 
