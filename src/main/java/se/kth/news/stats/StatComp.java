@@ -63,57 +63,70 @@ public class StatComp extends ComponentDefinition {
         @Override
         public void handle(AggregateTimeout aggregateTimeout) {
 
-            //calculateStats();
+            calculateStats();
+            nodeData.clear();
         }
     };
-/*
+
     private void calculateStats(){
-        HashMap<UUID, Integer> uniqueNews = new HashMap<>();
+        float newsCount = longestBitStringSize();
+        float nodeCount = nodeData.size();
 
-        Iterator<KAddress> it = nodeData.keySet().iterator();
-        while(it.hasNext()){
-            KAddress node = it.next();
-            UUID[] newsSeen = nodeData.get(node);
+        float[] newsCounters = new float[(int) newsCount];
+        float[] nodeCounters = new float[(int) nodeCount];
 
-            for(UUID id: newsSeen)
-                uniqueNews.putIfAbsent(id, 0);
-        }
+        Iterator<String> biterator = nodeData.values().iterator();
 
-        it = nodeData.keySet().iterator();
-        float avgCoverage = 0;
-        while(it.hasNext()){
-            KAddress node = it.next();
-            UUID[] newsSeen = nodeData.get(node);
-            float nodeCoverage = (float) newsSeen.length / uniqueNews.size();
-            avgCoverage += nodeCoverage;
-            for(UUID id: newsSeen){
-                int count = uniqueNews.get(id);
-                uniqueNews.put(id, ++count);
+        int nodeId = 0;
+        while(biterator.hasNext()){
+            String bitString = biterator.next();
+
+            for(int i = 0; i < bitString.length(); ++i){
+                if(bitString.charAt(i) == '1'){
+                    nodeCounters[nodeId] ++;
+                    newsCounters[i] ++;
+                }
             }
+
+            nodeId++;
         }
 
-        avgCoverage /= nodeData.size();
+        float totalNewsCount = 0;
+        float totalNodeCount = 0;
 
-        LOG.info("avg node coverage {}", avgCoverage);
-
-        float avgNewsCoverage = 0;
-        Iterator<UUID> newsIds = uniqueNews.keySet().iterator();
-        while(newsIds.hasNext()){
-            UUID newsItem = newsIds.next();
-
-            int count = uniqueNews.get(newsItem);
-            float coverage = (float) count / nodeData.size();
-
-            avgNewsCoverage += coverage;
+        for(int i = 0; i < newsCount; ++i) {
+            newsCounters[i] /= nodeCount;
+            totalNewsCount += newsCounters[i];
         }
 
-        avgNewsCoverage /= uniqueNews.size();
+        for(int i = 0; i < nodeCount; ++i) {
+            nodeCounters[i] /= newsCount;
+            totalNodeCount += nodeCounters[i];
+        }
 
-        LOG.info("avg news coverage {}", avgNewsCoverage);
+        totalNewsCount /= newsCount;
+        totalNodeCount /= nodeCount;
 
+        LOG.info("news: {}%, {}", totalNewsCount*100, "");//Arrays.toString(newsCounters));
+        LOG.info("node: {}%, {}", totalNodeCount*100, "");//Arrays.toString(nodeCounters));
     }
 
-    */
+    private int longestBitStringSize(){
+        Iterator<String> iterator = nodeData.values().iterator();
+        int largestSize = 0;
+        while(iterator.hasNext()){
+            String bitString = iterator.next();
+            for(int i = bitString.length() -1; i >= 0; --i){
+                if(bitString.charAt(i) == '1')
+                    if(i + 1 > largestSize){
+                        largestSize = i + 1;
+                        break;
+                    }
+            }
+
+        }
+        return largestSize;
+    }
 
     private static class AggregateTimeout extends Timeout{
 

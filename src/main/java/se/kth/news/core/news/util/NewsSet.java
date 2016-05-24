@@ -53,7 +53,7 @@ public class NewsSet {
         for(int i = 0; i < bitString.length(); ++i){
             if(bitString.charAt(i) == '0'){
                 if(this.bitString.get(i) == '1'){
-                    items.add(seenNews.get(i));
+                    items.add(seenNews.get((long) i));
                 }
             }
         }
@@ -61,11 +61,16 @@ public class NewsSet {
         // add remaining news that requester hasn't seen
         for(int i = bitString.length(); i < this.bitString.size(); ++i){
             if(this.bitString.get(i) == '1'){
-                items.add(seenNews.get(i));
+                items.add(seenNews.get((long) i));
             }
         }
 
-        return (NewsItem[]) items.toArray();
+        NewsItem[] array = new NewsItem[items.size()];
+
+        for(int i = 0; i < array.length; ++i)
+            array[i] = items.get(i);
+
+        return array;
     }
 
 }

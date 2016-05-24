@@ -71,8 +71,17 @@ public class DisseminationComp extends ComponentDefinition {
         @Override
         public void handle(Start event) {
             LOG.info("{}starting...", logPrefix);
+            startTimers();
         }
     };
+
+    private void startTimers(){
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(10000, 5000);
+        PullTimeout pullTimeout = new PullTimeout(spt);
+        spt.setTimeoutEvent(pullTimeout);
+        trigger(spt, timerPort);
+
+    }
 
     Handler handleGradientSample = new Handler<TGradientSample>() {
         @Override
@@ -117,7 +126,7 @@ public class DisseminationComp extends ComponentDefinition {
     private KAddress chooseNeighbor(){
         if(gradientNeighbours == null || gradientNeighbours.size() == 0)
             return null;
-        Container<KAddress, ?> neighbour = gradientNeighbours.get(gradientRobin++);
+        Container<KAddress, ?> neighbour = gradientNeighbours.get(gradientRobin++%gradientNeighbours.size());
         gradientRobin %= gradientNeighbours.size();
         return neighbour.getSource();
     }

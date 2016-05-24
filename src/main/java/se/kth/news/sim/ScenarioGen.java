@@ -19,14 +19,20 @@ package se.kth.news.sim;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
+
 import se.kth.news.sim.compatibility.SimNodeIdExtractor;
+import se.kth.news.sim.util.RandomDistinctDistribution;
 import se.kth.news.stats.StatComp;
 import se.kth.news.system.HostMngrComp;
 import se.sics.kompics.network.Address;
 import se.sics.kompics.simulator.SimulationScenario;
 import se.sics.kompics.simulator.adaptor.Operation;
 import se.sics.kompics.simulator.adaptor.Operation1;
+import se.sics.kompics.simulator.adaptor.distributions.Distribution;
+import se.sics.kompics.simulator.adaptor.distributions.IntegerUniformDistribution;
 import se.sics.kompics.simulator.adaptor.distributions.extra.BasicIntSequentialDistribution;
+import se.sics.kompics.simulator.events.system.KillNodeEvent;
 import se.sics.kompics.simulator.events.system.SetupEvent;
 import se.sics.kompics.simulator.events.system.StartNodeEvent;
 import se.sics.kompics.simulator.network.identifier.IdentifierExtractor;
@@ -121,6 +127,7 @@ public class ScenarioGen {
             return new StartNodeEvent() {
                 KAddress selfAdr;
 
+
                 {
                     selfAdr = ScenarioSetup.getNodeAdr(nodeId);
                 }
@@ -152,6 +159,31 @@ public class ScenarioGen {
         }
     };
 
+    static Operation1 killNodeOp = new Operation1<KillNodeEvent, Integer>(){
+
+        public KillNodeEvent generate(final Integer nodeId) {
+            return new KillNodeEvent() {
+
+                {
+                    nodeAdr = ScenarioSetup.getNodeAdr(nodeId);
+                    System.out.println("Greatest logging killed node with id "+nodeId);
+                }
+
+                private KAddress nodeAdr;
+
+                @Override
+                public Address getNodeAddress() {
+                    return nodeAdr;
+                }
+
+                @Override
+                public String toString() {
+                    return "Killed node <"+nodeAdr.toString()+">";
+                }
+            };
+        }
+    };
+
     public static SimulationScenario simpleBoot() {
         SimulationScenario scen = new SimulationScenario() {
             {
@@ -167,7 +199,7 @@ public class ScenarioGen {
                         raise(1, startBootstrapServerOp);
                     }
                 };
-                final StochasticProcess startStatServer = new StochasticProcess() {
+                StochasticProcess startStatServer = new StochasticProcess() {
                     {
                         eventInterArrivalTime(constant(1000));
                         raise(1, startStatCompOp);
@@ -176,7 +208,20 @@ public class ScenarioGen {
                 StochasticProcess startPeers = new StochasticProcess() {
                     {
                         eventInterArrivalTime(uniform(10, 20));
-                        raise(5, startNodeOp, new BasicIntSequentialDistribution(2));
+                        raise(200, startNodeOp, new BasicIntSequentialDistribution(2));
+                    }
+                };
+                StochasticProcess killNode = new StochasticProcess() {
+                    {
+                        eventInterArrivalTime(uniform(10, 20));
+                        //raise(3, killNodeOp, new BasicIntSequentialDistribution(2));
+                        raise(20, killNodeOp, new RandomDistinctDistribution(2, 202));
+                    }
+                };
+                StochasticProcess startFewPeers = new StochasticProcess() {
+                    {
+                        eventInterArrivalTime(uniform(10, 20));
+                        raise(5, startNodeOp, new BasicIntSequentialDistribution(400));
                     }
                 };
 
@@ -184,6 +229,8 @@ public class ScenarioGen {
                 startBootstrapServer.startAfterTerminationOf(1000, systemSetup);
                 startStatServer.startAfterTerminationOf(1000, startBootstrapServer);
                 startPeers.startAfterTerminationOf(1000, startStatServer);
+                killNode.startAfterStartOf(50000, startBootstrapServer);
+                startFewPeers.startAfterTerminationOf(1000, killNode);
                 terminateAfterTerminationOf(1000*1000, startPeers);
             }
         };

@@ -70,10 +70,13 @@ public class LeaderSelectComp extends ComponentDefinition {
     private KAddress currentLeader;
 
     private int gradientRounds = 0;
+    private int patienceRounds = 0;
     private static int STATIC_ROUNDS;
     private static int CLIQUE_SIZE;
+    private static int PATIENCE_ROUNDS;
     private static final KConfigOption.Basic<Integer> centerNodes = new KConfigOption.Basic("gradient.viewSize", Integer.class);
     private static final KConfigOption.Basic<Integer> staticRounds = new KConfigOption.Basic("leaderSelection.staticRounds", Integer.class);
+    private static final KConfigOption.Basic<Integer> patience = new KConfigOption.Basic("leaderSelection.patience", Integer.class);
 
     private boolean leaderSelectionInitiated = false;
 
@@ -86,6 +89,7 @@ public class LeaderSelectComp extends ComponentDefinition {
 
         CLIQUE_SIZE = centerNodes.readValue(this.config()).get().intValue();
         STATIC_ROUNDS = staticRounds.readValue(this.config()).get().intValue();
+        PATIENCE_ROUNDS = patience.readValue(this.config()).get().intValue();
 
         subscribe(handleStart, control);
         subscribe(handleGradientSample, gradientPort);
@@ -119,7 +123,9 @@ public class LeaderSelectComp extends ComponentDefinition {
             localNewsView = (NewsView) sample.selfView;
 
             if(iAmLocalLeader(gradientNeighbours, localNewsView) && !iAmGlobalLeader()){
-                startPaxosSelection();
+                if(waitedPatiently()){
+                    startPaxosSelection();
+                }
             }
 
         }
@@ -127,6 +133,7 @@ public class LeaderSelectComp extends ComponentDefinition {
 
     private boolean iAmLocalLeader(List<Container<KAddress, NewsView>> containers, NewsView self){
         if(gradientRounds < STATIC_ROUNDS) return false;
+        if(gradientNeighbours.size() < CLIQUE_SIZE) return false;
         for(Container<KAddress, NewsView> container: containers)
             if(viewComparator.compare(container.getContent(), self) >= 0)
                 return false;
@@ -137,7 +144,14 @@ public class LeaderSelectComp extends ComponentDefinition {
         return currentLeader != null && currentLeader.equals(selfAdr);
     }
 
+    private boolean waitedPatiently(){
+        if(currentLeader == null)
+            return true;
+        return(++patienceRounds == PATIENCE_ROUNDS);
+    }
+
     private void startPaxosSelection(){
+        patienceRounds = 0;
         if(!leaderSelectionInitiated) {
             leaderSelectionInitiated = true;
 
@@ -171,6 +185,7 @@ public class LeaderSelectComp extends ComponentDefinition {
         public void handle(PaxosLeaderInternalCheck paxosLeaderInternalCheck) {
             ArrayList<NewsView> myViews = new ArrayList<>();
             myViews.add(localNewsView);
+            LOG.debug("{} has {} news and suggested leader has {} news", logPrefix, localNewsView.localNewsCount, paxosLeaderInternalCheck.getSuggestedLeader().getContent().localNewsCount);
             for(Container<?, NewsView> view: gradientNeighbours)
                 myViews.add(view.getContent());
 
@@ -182,6 +197,20 @@ public class LeaderSelectComp extends ComponentDefinition {
                 if(viewComparator.compare(suggestedView, view) < 0){
                     possibleLeader = false;
                 }
+            }
+
+            if(myViews.contains(suggestedView)){
+                int index = myViews.indexOf(suggestedView);
+                NewsView realView = myViews.get(index);
+
+                if (realView.localNewsCount < suggestedView.localNewsCount){
+                    LOG.debug("{} thinks {} is maybe lying about its news count, wont trust for now!", logPrefix, paxosLeaderInternalCheck.getSuggestedLeader().getSource());
+                    possibleLeader = false;
+                }
+
+            }else{
+                LOG.debug("{} got leader prepare from outside of top", logPrefix);
+                possibleLeader = false;
             }
 
             trigger(new PaxosLeaderInternalResponse(paxosLeaderInternalCheck.getSuggestedLeader(), possibleLeader, paxosLeaderInternalCheck.getMsgId()), paxosLeaderPort);

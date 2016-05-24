@@ -43,6 +43,14 @@ public class NewsView implements View{
         return "#"+localNewsCount +" News<" + nodeId + ">";
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof NewsView){
+            NewsView view = (NewsView) obj;
+            return view.nodeId.equals(nodeId);
+        }
+        return false;
+    }
 
     // ;^)
     public double getUtility(){

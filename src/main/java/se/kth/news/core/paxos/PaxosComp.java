@@ -13,6 +13,8 @@ import se.kth.news.core.paxos.ports.PaxosNewsPort;
 import se.sics.kompics.*;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
+import se.sics.kompics.timer.ScheduleTimeout;
+import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
@@ -44,6 +46,7 @@ public class PaxosComp extends ComponentDefinition {
     private int quorumSize;
     private ArrayList<KAddress> quorum = new ArrayList<>();
     private HashMap<Integer, Integer> acks = new HashMap<>();
+    private static final int PAXOS_LEADER_TIMEOUT = 5000;
 
     public PaxosComp(Init init){
         selfAdr = init.selfAdr;
@@ -53,6 +56,7 @@ public class PaxosComp extends ComponentDefinition {
         subscribe(leaderStartHandler, paxosLeaderPort);
         subscribe(newsPrepareHandler, paxosNewsPort);
         subscribe(handleStart, control);
+        subscribe(leaderTimeoutHandler, timerPort);
 
         subscribe(handleLeaderPrepare, networkPort);
         subscribe(handleLeaderPromise, networkPort);
@@ -76,6 +80,7 @@ public class PaxosComp extends ComponentDefinition {
             LOG.debug("{} got leader start for {}", logPrefix, paxosLeaderStart.getBallot());
             quorum = paxosLeaderStart.getQuorum();
             quorumSize = quorum.size();
+            startLeaderTimer();
 
             Prepare<Container<KAddress, NewsView>> leaderPrepare = new Prepare<>(paxosLeaderStart.getSuggestedLeader(), paxosLeaderStart.getBallot());
 
@@ -95,7 +100,7 @@ public class PaxosComp extends ComponentDefinition {
 
         @Override
         public void handle(Promise<Boolean> promise, KContentMsg<?, ?, Promise<Boolean>> container) {
-            LOG.trace("{} received promise from: {}", logPrefix, container.getHeader().getSource());
+            LOG.trace("{} received promise ({}) from: {}", logPrefix, promise.getValue(), container.getHeader().getSource());
 
             if(promise.getValue()){
                 if(acks.containsKey(promise.getBallot())){
@@ -129,7 +134,7 @@ public class PaxosComp extends ComponentDefinition {
     Handler<PaxosNewsPrepare> newsPrepareHandler = new Handler<PaxosNewsPrepare>() {
         @Override
         public void handle(PaxosNewsPrepare prepare) {
-            LOG.info("got news prepare for {}", prepare.getNewsItem().getId());
+            LOG.info("{} got news prepare for {}", logPrefix, prepare.getNewsItem().getId());
             Accept<NewsItem> accept = new Accept<>(prepare.getNewsItem());
 
             for(KAddress member: prepare.getQuorum()){
@@ -138,6 +143,22 @@ public class PaxosComp extends ComponentDefinition {
                 trigger(msg, networkPort);
             }
 
+        }
+    };
+
+    private void startLeaderTimer(){
+        ScheduleTimeout st = new ScheduleTimeout(PAXOS_LEADER_TIMEOUT);
+        LeaderTimeout statsTimeout = new LeaderTimeout(st);
+        st.setTimeoutEvent(statsTimeout);
+        trigger(st, timerPort);
+    }
+
+    Handler<LeaderTimeout> leaderTimeoutHandler = new Handler<LeaderTimeout>() {
+        @Override
+        public void handle(LeaderTimeout leaderTimeout) {
+            LOG.debug("{} interrupted its leader selection due to timeout", logPrefix);
+            trigger(new PaxosLeaderResponse(false), paxosLeaderPort);
+            acks.clear();
         }
     };
 
@@ -186,6 +207,14 @@ public class PaxosComp extends ComponentDefinition {
 
     private void handle(KAddress leader){
         trigger(new PaxosLeaderAnnounce(leader), paxosLeaderPort);
+    }
+
+    private static class LeaderTimeout extends Timeout {
+
+        public LeaderTimeout(ScheduleTimeout timeout){
+            super(timeout);
+        }
+
     }
 
     public static class Init extends se.sics.kompics.Init<PaxosComp> {

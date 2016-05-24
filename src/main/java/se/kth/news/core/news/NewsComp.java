@@ -120,9 +120,10 @@ public class NewsComp extends ComponentDefinition {
     Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
-            LOG.info("{}starting...", logPrefix);
+            LOG.info("{} starting...", logPrefix);
             updateLocalNewsView();
             startTimers();
+            createNews();
         }
     };
 
@@ -139,18 +140,21 @@ public class NewsComp extends ComponentDefinition {
 
     }
 
+    private void createNews(){
+        NewsItem item = new NewsItem();
+        publishNewsItem(item);
+    }
+
     private void updateLocalNewsView() {
         localNewsView = new NewsView(selfAdr.getId(), newsSet.getNewsCount());
-        LOG.debug("{}informing overlays of new view", logPrefix);
+        LOG.debug("{} informing overlays of its utility", logPrefix);
         trigger(new OverlayViewUpdate.Indication<>(gradientOId, false, localNewsView.copy()), viewUpdatePort);
     }
 
     Handler handleCroupierSample = new Handler<CroupierSample<NewsView>>() {
         @Override
         public void handle(CroupierSample<NewsView> castSample) {
-            if (castSample.publicSample.isEmpty()) {
-                return;
-            }
+
         }
     };
 
@@ -200,8 +204,10 @@ public class NewsComp extends ComponentDefinition {
     Handler<NewsUpdate> newsUpdate = new Handler<NewsUpdate>() {
         @Override
         public void handle(NewsUpdate newsUpdate) {
-            for(NewsItem item: newsUpdate.getNews())
+            for(NewsItem item: newsUpdate.getNews()) {
                 newsSet.add(item);
+                LOG.info("{} received newsitem {} from diss component", logPrefix, item.getId());
+            }
             updateLocalNewsView();
         }
     };
@@ -222,6 +228,7 @@ public class NewsComp extends ComponentDefinition {
                 item.setId(newsSet.getNextId());
                 newsSet.add(item);
                 updateLocalNewsView();
+                LOG.info("{} is leader and is publishing item {}", logPrefix, item.getId());
                 trigger(new PaxosNewsPrepare(item, gradientNeighbours), paxosNewsPort);
 
                 KHeader header = new BasicHeader(selfAdr, content.getHeader().getSource(), Transport.UDP);
@@ -229,6 +236,7 @@ public class NewsComp extends ComponentDefinition {
                 trigger(msg, networkPort);
             }else{
                 // if you're not leader, tell the requester to ask your leader
+                LOG.info("{} recieved a publish but was not leader", logPrefix);
                 KHeader header = new BasicHeader(selfAdr, content.getHeader().getSource(), Transport.UDP);
                 KContentMsg msg = new BasicContentMsg(header, new NewsCreateResponse(currentLeader, false, request.getMessageId()));
                 trigger(msg, networkPort);
@@ -242,7 +250,9 @@ public class NewsComp extends ComponentDefinition {
             if(response.isSuccess()){
                 NewsCreateRequest fakeRequest = new NewsCreateRequest(null, response.getMessageId());
                 unsentNews.remove(fakeRequest);
+                LOG.info("{} received news publish ack", logPrefix);
             }else{
+                LOG.info("{} tried to publish to the wrong leader", logPrefix);
                 trigger(new LeaderUpdate(response.getLeader()), leaderPort);
             }
         }
@@ -257,20 +267,29 @@ public class NewsComp extends ComponentDefinition {
     };
 
     private void sendUnsentNews(){
-        KHeader header = new BasicHeader(selfAdr, currentLeader, Transport.UDP);
-        for(NewsCreateRequest request: unsentNews){
-            KContentMsg msg = new BasicContentMsg(header, request);
-            trigger(msg, networkPort);
+        if(currentLeader != null) {
+            if(!unsentNews.isEmpty())
+                LOG.debug("{} is sending its unsent news", logPrefix);
+            KHeader header = new BasicHeader(selfAdr, currentLeader, Transport.UDP);
+            for (NewsCreateRequest request : unsentNews) {
+                KContentMsg msg = new BasicContentMsg(header, request);
+                trigger(msg, networkPort);
+            }
         }
     }
 
     private void publishNewsItem(NewsItem item){
         NewsCreateRequest request = new NewsCreateRequest(item, (int) (Math.random()*Integer.MAX_VALUE));
         unsentNews.add(request);
+        LOG.debug("{} is creating a news item...", logPrefix);
 
-        KHeader header = new BasicHeader(selfAdr, currentLeader, Transport.UDP);
-        KContentMsg msg = new BasicContentMsg(header, request);
-        trigger(msg, networkPort);
+        if(currentLeader != null) {
+            KHeader header = new BasicHeader(selfAdr, currentLeader, Transport.UDP);
+            KContentMsg msg = new BasicContentMsg(header, request);
+            trigger(msg, networkPort);
+        }else{
+            LOG.debug("{} tried to publish a newsitem but there was no leader", logPrefix);
+        }
     }
 
     private static class NewsRequestTimeout extends Timeout{

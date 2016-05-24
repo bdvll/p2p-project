@@ -1,5 +1,7 @@
 package se.kth.news.core.news.messages;
 
+import se.kth.news.core.news.util.ClickBaiter;
+
 /**
  * Created by Love on 2016-04-27.
  */
@@ -7,6 +9,11 @@ public class NewsItem {
 
     private long id;
     private String newsContent;
+
+    public NewsItem(){
+        this.id = -1;
+        this.newsContent = generateContent();
+    }
 
     public NewsItem(long id) {
         this.id = id;
@@ -40,9 +47,7 @@ public class NewsItem {
     }
 
     private String generateContent(){
-        StringBuilder sb = new StringBuilder();
-
-        return sb.toString();
+        return ClickBaiter.getBait();
     }
 
 }

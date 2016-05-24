@@ -1,4 +1,4 @@
-package test;
+package se.kth.news.core.news.util;
 
 public class ClickBaiter {
 	
@@ -12,7 +12,7 @@ public class ClickBaiter {
 	private static String[] subjects = {"A truck driver","A random Italian guy", "The king of Spain", "The guy from Scrubs","I","Göran Persson","Emil Karlsson", "Robert Rönngren","Åsa Romson","Jimmie Åkesson","Carola","Amy Diamond"};
 	private static String[] clickBait ={"you can never guess what happened next!", "what happened next will blow your mind!","then something incredible happened!", "with this one weird tip!", "then hell broke loose!","the result is amazing!","what happened next is breaking the internet!","first you will be chocked, then you will be inspired!"};
 
-	public static void main(String[] args) {
+	public static String getBait() {
 		StringBuilder sb = new StringBuilder("");
 		if(Math.random() < 0.5){
 			int rnd = (int)(Math.random()*30);
@@ -42,7 +42,7 @@ public class ClickBaiter {
 			sb.append(clickBait[(int)(Math.random()*clickBait.length)]);
 		}
 		
-		System.out.println(sb.toString());
+		return sb.toString();
 	}
 	private static class Adjective{
 		private String adjective;
