@@ -176,7 +176,7 @@ public class ScenarioGen {
                 StochasticProcess startPeers = new StochasticProcess() {
                     {
                         eventInterArrivalTime(uniform(100,200));
-                        raise(168, startNodeOp, new BasicIntSequentialDistribution(2));
+                        raise(FloodingConfig.NODE_COUNT, startNodeOp, new BasicIntSequentialDistribution(2));
                     }
                 };
 

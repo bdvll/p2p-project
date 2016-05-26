@@ -25,8 +25,31 @@ import se.sics.kompics.simulator.run.LauncherComp;
  */
 public class SimLauncher {
     public static void main(String[] args) {
-        SimulationScenario.setSeed(ScenarioSetup.scenarioSeed);
-        SimulationScenario simpleBootScenario = ScenarioGen.simpleBoot();
-        simpleBootScenario.simulate(LauncherComp.class);
+      /*
+        for(int i = 1; i <= 16; ++i) {
+            FloodingConfig.saveParams(i, 100);
+            SimulationScenario.setSeed(ScenarioSetup.scenarioSeed);
+            SimulationScenario simpleBootScenario = ScenarioGen.simpleBoot();
+            simpleBootScenario.simulate(LauncherComp.class);
+        }
+        */
+        for(int i = 0; i <= 5; ++i){
+            FloodingConfig.saveParams(5, getNodeCount(i)); //5 from gnutella default
+            SimulationScenario.setSeed(ScenarioSetup.scenarioSeed);
+            SimulationScenario simpleBootScenario = ScenarioGen.simpleBoot();
+            simpleBootScenario.simulate(LauncherComp.class);
+        }
+    }
+
+    private static int getNodeCount(int i){
+        switch (i){
+            case 0: return 25;
+            case 1: return 50;
+            case 2: return 200;
+            case 3: return 500;
+            case 4: return 1000;
+            case 5: return 10000;
+            default: return 1;
+        }
     }
 }

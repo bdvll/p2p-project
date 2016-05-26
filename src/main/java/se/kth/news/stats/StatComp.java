@@ -2,6 +2,7 @@ package se.kth.news.stats;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.news.sim.FloodingConfig;
 import se.kth.news.stats.messages.NewsStat;
 import se.sics.kompics.*;
 import se.sics.kompics.network.Network;
@@ -11,6 +12,9 @@ import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 import java.util.function.BiConsumer;
 
@@ -38,6 +42,7 @@ public class StatComp extends ComponentDefinition {
         public void handle(Start start) {
             LOG.info("Stat started...");
             startTimers();
+            FloodingConfig.readParams();
         }
     };
 
@@ -110,6 +115,21 @@ public class StatComp extends ComponentDefinition {
 
         LOG.info("avg news coverage {}", avgNewsCoverage);
 
+        writeToFile(avgCoverage, avgNewsCoverage);
+
+    }
+
+    private void writeToFile(float nodeCoverage, float newsCoverage){
+        int TTL = FloodingConfig.TTL;
+        int NODE_COUNT = FloodingConfig.NODE_COUNT;
+        File file = new File("testdata/flooding_"+ TTL +"_"+NODE_COUNT);
+        try {
+            FileWriter writer = new FileWriter(file);
+            writer.write("TTL = "+TTL+", Nodes = "+NODE_COUNT+", node cvg = "+nodeCoverage+", news cvg = "+newsCoverage);
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private static class AggregateTimeout extends Timeout{

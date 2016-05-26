@@ -28,6 +28,7 @@ import se.kth.news.core.news.util.NewsSet;
 import se.kth.news.core.news.util.NewsView;
 import se.kth.news.play.Ping;
 import se.kth.news.play.Pong;
+import se.kth.news.sim.FloodingConfig;
 import se.kth.news.stats.messages.NewsStat;
 import se.sics.kompics.ClassMatchedHandler;
 import se.sics.kompics.ComponentDefinition;
@@ -102,6 +103,7 @@ public class NewsComp extends ComponentDefinition {
         public void handle(Start event) {
             LOG.info("{}starting...", logPrefix);
             updateLocalNewsView();
+            FloodingConfig.readParams();
             generateNewsAtStart();
             startTimers();
         }
@@ -122,7 +124,8 @@ public class NewsComp extends ComponentDefinition {
 
     private void generateNewsAtStart(){
         if(Math.random() >= 0.5f) {
-            NewsItem item = new NewsItem(15);
+            NewsItem item = new NewsItem(FloodingConfig.TTL);
+            newsSet.add(item);
             unsentNews.add(item);
         }
        // floodToNeighbours(item);

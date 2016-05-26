@@ -1,0 +1,16 @@
+TTL = 10, Nodes = 100, node cvg = 0.5477083, news cvg = 0.54770845
+TTL = 11, Nodes = 100, node cvg = 0.5785416, news cvg = 0.5785416
+TTL = 12, Nodes = 100, node cvg = 0.61176467, news cvg = 0.61176467
+TTL = 13, Nodes = 100, node cvg = 0.63690895, news cvg = 0.63690907
+TTL = 14, Nodes = 100, node cvg = 0.6611323, news cvg = 0.6611321
+TTL = 15, Nodes = 100, node cvg = 0.67684233, news cvg = 0.676842
+TTL = 16, Nodes = 100, node cvg = 0.6833961, news cvg = 0.68339616
+TTL = 1, Nodes = 100, node cvg = 0.01, news cvg = 0.009999996
+TTL = 2, Nodes = 100, node cvg = 0.11000002, news cvg = 0.109999985
+TTL = 3, Nodes = 100, node cvg = 0.19363634, news cvg = 0.19363633
+TTL = 4, Nodes = 100, node cvg = 0.26306137, news cvg = 0.26306126
+TTL = 5, Nodes = 100, node cvg = 0.3278261, news cvg = 0.3278261
+TTL = 6, Nodes = 100, node cvg = 0.38081637, news cvg = 0.3808163
+TTL = 7, Nodes = 100, node cvg = 0.42775512, news cvg = 0.42775497
+TTL = 8, Nodes = 100, node cvg = 0.48217395, news cvg = 0.48217395
+TTL = 9, Nodes = 100, node cvg = 0.5204545, news cvg = 0.5204545

@@ -51,7 +51,7 @@ public class ScenarioSetup {
 
     public static KAddress getNodeAdr(int nodeId) {
         try {
-            return NatAwareAddressImpl.open(new BasicAddress(InetAddress.getByName("193.0.0." + nodeId), appPort, new IntIdentifier(nodeId)));
+            return NatAwareAddressImpl.open(new BasicAddress(InetAddress.getByName("193.0."+nodeId/256+"." + nodeId%256), appPort, new IntIdentifier(nodeId)));
         } catch (UnknownHostException ex) {
             throw new RuntimeException(ex);
         }
