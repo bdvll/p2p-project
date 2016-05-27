@@ -183,6 +183,12 @@ public class LeaderSelectComp extends ComponentDefinition {
     Handler<PaxosLeaderInternalCheck> paxosLeaderInternalCheckHandler = new Handler<PaxosLeaderInternalCheck>() {
         @Override
         public void handle(PaxosLeaderInternalCheck paxosLeaderInternalCheck) {
+            // If we haven't received a Tman update yet
+            if(localNewsView == null){
+                trigger(new PaxosLeaderInternalResponse(paxosLeaderInternalCheck.getSuggestedLeader(), false, paxosLeaderInternalCheck.getMsgId()), paxosLeaderPort);
+                return;
+            }
+
             ArrayList<NewsView> myViews = new ArrayList<>();
             myViews.add(localNewsView);
             LOG.debug("{} has {} news and suggested leader has {} news", logPrefix, localNewsView.localNewsCount, paxosLeaderInternalCheck.getSuggestedLeader().getContent().localNewsCount);

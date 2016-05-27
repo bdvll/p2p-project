@@ -9,6 +9,7 @@ import se.kth.news.core.dissemination.ports.LeaderDisseminationPort;
 import se.kth.news.core.dissemination.ports.NewsDisseminationPort;
 import se.kth.news.core.news.messages.NewsItem;
 import se.kth.news.core.news.util.NewsView;
+import se.kth.news.sim.DisseminationConfig;
 import se.sics.kompics.*;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
@@ -54,6 +55,8 @@ public class DisseminationComp extends ComponentDefinition {
 
         logPrefix = "<nid:" + selfAdr.getId() + ">";
 
+        DisseminationConfig.readParams();
+
         subscribe(handleStart, control);
         subscribe(handleGradientSample, gradientPort);
         subscribe(pullTimeoutHandler, timerPort);
@@ -76,7 +79,7 @@ public class DisseminationComp extends ComponentDefinition {
     };
 
     private void startTimers(){
-        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(10000, 5000);
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(10000, DisseminationConfig.DISSEMINATION_RATE);
         PullTimeout pullTimeout = new PullTimeout(spt);
         spt.setTimeoutEvent(pullTimeout);
         trigger(spt, timerPort);

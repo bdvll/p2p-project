@@ -25,8 +25,33 @@ import se.sics.kompics.simulator.run.LauncherComp;
  */
 public class SimLauncher {
     public static void main(String[] args) {
-        SimulationScenario.setSeed(ScenarioSetup.scenarioSeed);
-        SimulationScenario simpleBootScenario = ScenarioGen.simpleBoot();
-        simpleBootScenario.simulate(LauncherComp.class);
+        for(int i = 0; i <= 4; ++i) {
+            for(int j = 0; j <= 2; ++j){
+                DisseminationConfig.saveParams(getDissRate(j), getNodeCount(i));
+                SimulationScenario.setSeed(ScenarioSetup.scenarioSeed);
+                SimulationScenario simpleBootScenario = ScenarioGen.simpleBoot();
+                simpleBootScenario.simulate(LauncherComp.class);
+            }
+        }
+    }
+
+    private static int getNodeCount(int i){
+        switch (i){
+            case 0: return 25;
+            case 1: return 50;
+            case 2: return 200;
+            case 3: return 500;
+            case 4: return 1000;
+            default: return 1;
+        }
+    }
+
+    private static int getDissRate(int i){
+        switch (i){
+            case 0: return 5000;
+            case 1: return 2500;
+            case 2: return 1000;
+            default: return 1;
+        }
     }
 }
