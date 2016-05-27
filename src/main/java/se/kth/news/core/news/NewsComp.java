@@ -229,7 +229,9 @@ public class NewsComp extends ComponentDefinition {
                 newsSet.add(item);
                 updateLocalNewsView();
                 LOG.info("{} is leader and is publishing item {}", logPrefix, item.getId());
-                trigger(new PaxosNewsPrepare(item, gradientNeighbours), paxosNewsPort);
+
+                // Don't push news in a perfect world
+                //trigger(new PaxosNewsPrepare(item, gradientNeighbours), paxosNewsPort);
 
                 KHeader header = new BasicHeader(selfAdr, content.getHeader().getSource(), Transport.UDP);
                 KContentMsg msg = new BasicContentMsg(header, new NewsCreateResponse(currentLeader, true, request.getMessageId()));
