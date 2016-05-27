@@ -51,8 +51,6 @@ public class LeaderSelectComp extends ComponentDefinition {
     private static final Logger LOG = LoggerFactory.getLogger(LeaderSelectComp.class);
     private String logPrefix = " ";
 
-    private static final int GRADIENT_NEIGHBOUR_SIZE = 2;
-
     //*******************************CONNECTIONS********************************
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<Network> networkPort = requires(Network.class);
@@ -126,6 +124,8 @@ public class LeaderSelectComp extends ComponentDefinition {
                 if(waitedPatiently()){
                     startPaxosSelection();
                 }
+            }else{
+                patienceRounds = 0;
             }
 
         }
