@@ -33,7 +33,7 @@ public class StatComp extends ComponentDefinition {
 
     private float minutesPassed  = 0;
     private static final int UPDATE_RATE = 5000;
-    private static final float minutesPerRound = UPDATE_RATE/60000;
+    private static final float minutesPerRound = UPDATE_RATE/(float) 60000;
     private ArrayList<Float> dataPoints = new ArrayList<>();
     private boolean hasWritten = false;
     private int VIEW_SIZE;
@@ -135,8 +135,9 @@ public class StatComp extends ComponentDefinition {
         hasWritten = true;
         int rate = DisseminationConfig.DISSEMINATION_RATE;
         int nodes = DisseminationConfig.NODE_COUNT;
+        int churnRate = DisseminationConfig.CHURN_PERCENTAGE;
         try {
-            FileWriter writer = new FileWriter(new File("testdata/perfect_"+rate+"_"+nodes+"_"+VIEW_SIZE));
+            FileWriter writer = new FileWriter(new File("testdata/imperfect_"+rate+"_"+nodes+"_"+VIEW_SIZE+"_"+churnRate));
             StringBuilder sb = new StringBuilder();
             sb.append("Minute,NewsCoverage\n");
             for(float value: dataPoints){
@@ -151,8 +152,20 @@ public class StatComp extends ComponentDefinition {
     }
 
     private int longestBitStringSize(){
-        //The amount of nodes will equal the amount of news sent
-        return DisseminationConfig.NODE_COUNT;
+        Iterator<String> iterator = nodeData.values().iterator();
+        int largestSize = 0;
+        while(iterator.hasNext()){
+            String bitString = iterator.next();
+            for(int i = bitString.length() -1; i >= 0; --i){
+                if(bitString.charAt(i) == '1')
+                    if(i + 1 > largestSize){
+                        largestSize = i + 1;
+                        break;
+                    }
+            }
+
+        }
+        return largestSize;
     }
 
     private static class AggregateTimeout extends Timeout{

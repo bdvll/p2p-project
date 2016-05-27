@@ -208,14 +208,14 @@ public class ScenarioGen {
                 StochasticProcess startPeers = new StochasticProcess() {
                     {
                         eventInterArrivalTime(uniform(10, 20));
-                        raise(200, startNodeOp, new BasicIntSequentialDistribution(2));
+                        raise(DisseminationConfig.NODE_COUNT, startNodeOp, new BasicIntSequentialDistribution(2));
                     }
                 };
                 StochasticProcess killNode = new StochasticProcess() {
                     {
-                        eventInterArrivalTime(uniform(10, 20));
+                        eventInterArrivalTime(uniform(50, 5000));
                         //raise(3, killNodeOp, new BasicIntSequentialDistribution(2));
-                        raise(20, killNodeOp, new RandomDistinctDistribution(2, 202));
+                        raise(DisseminationConfig.NODE_COUNT*DisseminationConfig.CHURN_PERCENTAGE/100, killNodeOp, new RandomDistinctDistribution(2, DisseminationConfig.NODE_COUNT+2));
                     }
                 };
                 StochasticProcess startFewPeers = new StochasticProcess() {
@@ -229,8 +229,8 @@ public class ScenarioGen {
                 startBootstrapServer.startAfterTerminationOf(1000, systemSetup);
                 startStatServer.startAfterTerminationOf(1000, startBootstrapServer);
                 startPeers.startAfterTerminationOf(1000, startStatServer);
-                killNode.startAfterStartOf(50000, startBootstrapServer);
-                startFewPeers.startAfterTerminationOf(1000, killNode);
+                killNode.startAfterTerminationOf(0, startPeers);
+               // startFewPeers.startAfterTerminationOf(1000, killNode);
                 terminateAfterTerminationOf(1000*1000, startPeers);
             }
         };
