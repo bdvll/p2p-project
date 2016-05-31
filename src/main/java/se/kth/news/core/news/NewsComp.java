@@ -128,12 +128,12 @@ public class NewsComp extends ComponentDefinition {
     };
 
     private void startTimers(){
-        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(100000, 5000);
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(10000, 5000);
         NewsRequestTimeout newsRequestTimeout = new NewsRequestTimeout(spt);
         spt.setTimeoutEvent(newsRequestTimeout);
         trigger(spt, timerPort);
 
-        SchedulePeriodicTimeout spt2 = new SchedulePeriodicTimeout(0, 10000);
+        SchedulePeriodicTimeout spt2 = new SchedulePeriodicTimeout(0, 2000);
         SendStatsTimeout statsTimeout = new SendStatsTimeout(spt2);
         spt2.setTimeoutEvent(statsTimeout);
         trigger(spt2, timerPort);

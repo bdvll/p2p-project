@@ -33,7 +33,7 @@ public class StatComp extends ComponentDefinition {
 
     private float minutesPassed  = 0;
     private static final int UPDATE_RATE = 5000;
-    private static final float minutesPerRound = UPDATE_RATE/60000;
+    private static final float minutesPerRound = UPDATE_RATE/(float)60000;
     private ArrayList<Float> dataPoints = new ArrayList<>();
     private boolean hasWritten = false;
     private int VIEW_SIZE;
