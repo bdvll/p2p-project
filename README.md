@@ -1,8 +1,15 @@
 
-# p2p-project
-Peer-to-peer news dissemination project in ID2210
+# Peer-to-peer news dissemination
+*Peer-to-peer news dissemination project in ID2210*
 
-# id2210-vt16
+## Goals
+ - Create a gradient topology
+ - Select a leader group once the topology is stable
+ - Handle churn as nodes leave and join
+ - Disseminate news in a pull-based way
+ - Achieve 100% news coverage
+
+## Getting started
 
 How to run the simulation from command line:
  
